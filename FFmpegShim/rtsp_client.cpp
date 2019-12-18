@@ -10,20 +10,23 @@ struct RtspClientContext
 {
     AVFormatContext *fmt;
 
-    AVStream *stream;
+    AVCodec *codec;
+    AVCodecContext *dec;
+    int video_idx;
 
-    AVCodec *dec;
-    AVCodecContext *dec_ctx;
+    AVPacket *pkt;
 
     int last_error;
 };
 
-LIBRARY_API(void) rtsp_close(RtspClientContext *ctx)
+LIBRARY_API(void) rtsp_free(RtspClientContext *ctx)
 {
-    if (ctx->dec_ctx)
+    av_read_pause(ctx->fmt);
+
+    if (ctx->dec)
     {
-        avcodec_close(ctx->dec_ctx);
-        avcodec_free_context(&ctx->dec_ctx);
+        avcodec_close(ctx->dec);
+        avcodec_free_context(&ctx->dec);
     }
 
     if (ctx->fmt)
@@ -32,12 +35,7 @@ LIBRARY_API(void) rtsp_close(RtspClientContext *ctx)
 
 LIBRARY_API(const char *) rtsp_get_codec_name(RtspClientContext *ctx)
 {
-    return ctx->dec->name;
-}
-
-LIBRARY_API(const char *) rtsp_get_pixel_format_name(RtspClientContext *ctx)
-{
-    return av_get_pix_fmt_name(ctx->dec_ctx->pix_fmt);
+    return ctx->codec->name;
 }
 
 LIBRARY_API(int) rtsp_open(char *uri, RtspClientContext *ctx)
@@ -61,32 +59,53 @@ LIBRARY_API(int) rtsp_open(char *uri, RtspClientContext *ctx)
         return -2;
     }
 
-    // open default video stream
-    auto stream_idx = av_find_best_stream(ctx->fmt, AVMEDIA_TYPE_VIDEO, -1, -1, &ctx->dec, 0);
+    // find default video stream
+    auto stream_idx = av_find_best_stream(ctx->fmt, AVMEDIA_TYPE_VIDEO, -1, -1, &ctx->codec, 0);
     if (stream_idx < 0)
     {
         fprintf(stderr, "[rtsp_open] no candidate video stream\n");
         return -3;
     }
+    ctx->video_idx = stream_idx;
 
-    // find stream codec
+    // create decoder
     auto stream = ctx->fmt->streams[stream_idx];
-    ctx->dec_ctx = avcodec_alloc_context3(ctx->dec);
+    ctx->dec = avcodec_alloc_context3(ctx->codec);
 
     // open stream decoder
     AVDictionary *dec_opts = nullptr;
     av_dict_set(&dec_opts, "refcounted_frames", "1", 0);
-    auto open_ret = avcodec_open2(ctx->dec_ctx, ctx->dec, &dec_opts);
+    auto open_ret = avcodec_open2(ctx->dec, ctx->codec, &dec_opts);
     if (open_ret < 0)
     {
-        fprintf(stderr, "[rtsp_open] failed to open codec %s: %d", ctx->dec->name, open_ret);
+        fprintf(stderr, "[rtsp_open] failed to open codec %s: %d", ctx->codec->name, open_ret);
         return -5;
     }
+
+    // allocate packet for receiving
+    ctx->pkt = av_packet_alloc();
+
+    // start playback (?)
+    av_read_play(ctx->fmt);
 
     return 0;
 }
 
 LIBRARY_API(int) rtsp_receive_frame(AVFrame *frame, RtspClientContext *ctx)
 {
-    return AVERROR(avcodec_receive_frame(ctx->dec_ctx, frame));
+    ctx->last_error = av_read_frame(ctx->fmt, ctx->pkt);
+    if (ctx->last_error)
+        return -1; // read frame packet failed
+    if (ctx->pkt->stream_index != ctx->video_idx)
+        return EAGAIN; // not video frame
+
+    ctx->last_error = avcodec_send_packet(ctx->dec, ctx->pkt);
+    if (ctx->last_error)
+        return -2; // queue decoding failed
+
+    ctx->last_error = avcodec_receive_frame(ctx->dec, frame);
+    if (ctx->last_error)
+        return -3; // retrieve decoding failed
+
+    return 0;
 }
