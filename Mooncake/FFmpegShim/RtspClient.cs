@@ -23,8 +23,6 @@ namespace AtomicAkarin.Mooncake.FFmpegShim
 
         private readonly RtspClientContext _context;
 
-        private readonly AVFrame _frame;
-
         public RtspClient(string uri)
         {
             _context = new RtspClientContext();
