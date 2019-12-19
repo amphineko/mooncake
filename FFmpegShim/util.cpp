@@ -1,11 +1,9 @@
 #include "export.h"
-#include <libavcodec/avcodec.h>
 
 extern "C"
 {
-#include <libavutil/frame.h>
+#include <libavcodec/avcodec.h>
 #include <libavutil/imgutils.h>
-#include <libavutil/mem.h>
 }
 
 LIBRARY_API(AVFrame *) shim_frame_alloc()

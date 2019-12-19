@@ -23,6 +23,9 @@ LIBRARY_API(void) rtsp_free(RtspClientContext *ctx)
 {
     av_read_pause(ctx->fmt);
 
+    if (ctx->pkt)
+        av_packet_free(&ctx->pkt);
+
     if (ctx->dec)
     {
         avcodec_close(ctx->dec);
@@ -96,6 +99,7 @@ LIBRARY_API(int) rtsp_receive_frame(AVFrame *frame, RtspClientContext *ctx)
     ctx->last_error = av_read_frame(ctx->fmt, ctx->pkt);
     if (ctx->last_error)
         return -1; // read frame packet failed
+
     if (ctx->pkt->stream_index != ctx->video_idx)
         return EAGAIN; // not video frame
 

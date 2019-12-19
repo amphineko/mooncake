@@ -46,21 +46,13 @@ namespace AtomicAkarin.Mooncake.FFmpegShim
         public override long Seek(long offset, SeekOrigin origin)
         {
             var length = Length;
-            try
+            return origin switch
             {
-                return origin switch
-                {
-                    SeekOrigin.Begin => (Position = offset),
-                    SeekOrigin.Current => (Position += offset),
-                    SeekOrigin.End => (Position = length + offset),
-                    _ => throw new ArgumentOutOfRangeException(nameof(origin), origin, null)
-                };
-            }
-            finally
-            {
-                if (Position < 0 || Position >= length)
-                    throw new ArgumentOutOfRangeException(nameof(Position), Position, null);
-            }
+                SeekOrigin.Begin => (Position = offset),
+                SeekOrigin.Current => (Position += offset),
+                SeekOrigin.End => (Position = length + offset),
+                _ => throw new ArgumentOutOfRangeException(nameof(origin), origin, null)
+            };
         }
 
         public override void SetLength(long value)

@@ -12,11 +12,20 @@ namespace AtomicAkarin.Mooncake.FFmpegShim
             _context = new ScalerContext();
         }
 
-        public int OutputWidth => _context.OutputWidth;
+        public int OutputWidth
+        {
+            set => _context.OutputWidth = value;
+        }
 
-        public int OutputHeight => _context.OutputHeight;
+        public int OutputHeight
+        {
+            set => _context.OutputHeight = value;
+        }
 
-        public int OutputPixelFormat => _context.OutputPixelFormat;
+        public int OutputPixelFormat
+        {
+            set => _context.OutputPixelFormat = value;
+        }
 
         public void Dispose()
         {

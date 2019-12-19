@@ -9,6 +9,6 @@ add_definitions(-D__STDC_CONSTANT_MACROS)
 
 link_directories(lib)
 
-add_library(ffmpeg_shim SHARED decoder_shim.cpp rtsp_client.cpp util.cpp)
-target_link_libraries(ffmpeg_shim avcodec avformat avutil)
+add_library(ffmpeg_shim SHARED bmp_encoder.cpp decoder_shim.cpp rtsp_client.cpp scaler.cpp util.cpp)
+target_link_libraries(ffmpeg_shim PRIVATE avcodec avformat avutil swscale)
 target_include_directories(ffmpeg_shim PRIVATE include)
