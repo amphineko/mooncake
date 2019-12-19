@@ -8,16 +8,12 @@ namespace AtomicAkarin.Mooncake.FFmpegShim
     {
         private readonly EncoderContext _context;
 
-        public FrameEncoder(int codecId)
+        public FrameEncoder(int codecId, int width, int height, AVPixelFormat pixelFormat)
         {
             _context = new EncoderContext();
-            var ret = BmpContextOpen(_context, codecId);
+            var ret = BmpContextOpen(_context, codecId, width, height, (int) pixelFormat);
             if (ret != 0)
                 throw new IOException($"Failed to open codec {codecId}: Error {ret}");
-        }
-
-        public FrameEncoder(AVCodecId codecId) : this((int) codecId)
-        {
         }
 
         public void Dispose()
@@ -30,9 +26,9 @@ namespace AtomicAkarin.Mooncake.FFmpegShim
         [DllImport(ShimUtil.LibraryName, EntryPoint = "bmp_context_free")]
         private static extern void BmpContextFree(EncoderContext ctx);
 
-        // LIBRARY_API(int) bmp_context_open(BmpEncoderContext *ctx, int codec_id)
+        // LIBRARY_API(int) bmp_context_open(BmpEncoderContext *ctx, int codec_id, int w, int h, int pix_fmt)
         [DllImport(ShimUtil.LibraryName, EntryPoint = "bmp_context_open")]
-        private static extern int BmpContextOpen(EncoderContext ctx, int codecId);
+        private static extern int BmpContextOpen(EncoderContext ctx, int codecId, int w, int h, int pixelFmt);
 
         // LIBRARY_API(int) bmp_encode(AVFrame *frame, AVPacket *pkt, BmpEncoderContext *ctx)
         [DllImport(ShimUtil.LibraryName, EntryPoint = "bmp_encode")]
