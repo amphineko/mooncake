@@ -12,16 +12,16 @@ struct BmpEncoderContext
     int last_error;
 };
 
-LIBRARY_API(BmpEncoderContext *) bmp_context_alloc()
-{
-    auto ctx = static_cast<BmpEncoderContext *>(av_mallocz(sizeof(BmpEncoderContext)));
-    return ctx;
-}
-
 LIBRARY_API(void) bmp_context_free(BmpEncoderContext *ctx)
 {
     avcodec_free_context(&ctx->enc);
     av_free(ctx);
+}
+
+LIBRARY_API(int) bmp_context_open(BmpEncoderContext *ctx, int codec_id)
+{
+    auto codec = avcodec_find_encoder(codec_id);
+    return avcodec_open2(ctx->ctx, codec, nullptr);
 }
 
 LIBRARY_API(int) bmp_encode(AVFrame *frame, AVPacket *pkt, BmpEncoderContext *ctx)
