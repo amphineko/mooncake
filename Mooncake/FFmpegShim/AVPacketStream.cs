@@ -8,6 +8,8 @@ namespace AtomicAkarin.Mooncake.FFmpegShim
     {
         private readonly IntPtr _pointer;
 
+        private long _position;
+
         public AVPacketStream(AVPacket packet)
         {
             _pointer = packet.Pointer;
@@ -21,7 +23,18 @@ namespace AtomicAkarin.Mooncake.FFmpegShim
 
         public override long Length => ShimPacketLen(_pointer);
 
-        public override long Position { get; set; }
+        public override long Position
+        {
+            get => _position;
+            set
+            {
+                if (value < 0)
+                    throw new IOException("Seeking before zero is illegal");
+                if (value >= Length)
+                    throw new IOException("Seeking beyond length is not supported");
+                _position = value;
+            }
+        }
 
         // LIBRARY_API(int) shim_packet_len(AVPacket *pkt)
         [DllImport(ShimUtil.LibraryName, EntryPoint = "shim_packet_len")]
@@ -33,36 +46,45 @@ namespace AtomicAkarin.Mooncake.FFmpegShim
 
         public override void Flush()
         {
-            // nothing to flush, left blank intentionally
+            // nothing to flush, period.
         }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
+            if (buffer == null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset < 0)
+                throw new ArgumentOutOfRangeException(nameof(offset), offset, null);
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count), count, null);
+            if (offset + count > buffer.Length)
+                throw new ArgumentException("Invalid offset and count");
+
             var readCount = (int) Math.Min(Length - Position, count);
             ShimPacketRead(buffer, offset, (int) Position, readCount, _pointer);
+            Position += readCount;
             return readCount;
         }
 
         public override long Seek(long offset, SeekOrigin origin)
         {
-            var length = Length;
-            return origin switch
+            return Position = origin switch
             {
-                SeekOrigin.Begin => (Position = offset),
-                SeekOrigin.Current => (Position += offset),
-                SeekOrigin.End => (Position = length + offset),
+                SeekOrigin.Begin => offset,
+                SeekOrigin.Current => Position + offset,
+                SeekOrigin.End => Length + offset,
                 _ => throw new ArgumentOutOfRangeException(nameof(origin), origin, null)
             };
         }
 
         public override void SetLength(long value)
         {
-            throw new NotImplementedException("Resizing underlying AVPacket is not supported");
+            throw new IOException("Resizing underlying AVPacket is not supported");
         }
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            throw new NotImplementedException("Writing to underlying AVPacket is not supported");
+            throw new IOException("Writing to underlying AVPacket is not supported");
         }
     }
 }
