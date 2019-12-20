@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
 
             // write to file
             char out_file[64];
-            sprintf(out_file, "%lld.png", frame_count);
+            sprintf(out_file, "%d.png", frame_count);
             auto f = fopen(out_file, "w");
             fwrite(out_pkt->data, sizeof(char), out_pkt->size, f);
             fclose(f);
