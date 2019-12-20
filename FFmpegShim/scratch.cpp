@@ -6,6 +6,7 @@ extern "C"
 }
 
 #include "bmp_encoder.cpp"
+#include "frame_reader.cpp"
 #include "scaler.cpp"
 
 int main(int argc, char *argv[])
@@ -21,125 +22,64 @@ int main(int argc, char *argv[])
     auto file = argv[1];
     printf("trying file %s\n", file);
 
-    // open input file
-    AVFormatContext *fmt = nullptr;
-    ret = avformat_open_input(&fmt, file, nullptr, nullptr);
+    auto reader = static_cast<FrameReaderContext *>(av_mallocz(sizeof(FrameReaderContext)));
+    ret = fr_context_open(file, reader);
     if (ret)
     {
-        fprintf(stderr, "avformat_open_input: %s\n", av_err2str(ret));
+        fprintf(stderr, "fr_context_open (step %d): %s (%d)\n", ret, reader->last_error_str, reader->last_error);
         return -1;
     }
-    printf("file open successfully: %s\n", argv[0]);
+    printf("fr_context_open: ok\n");
 
-    // retrieve stream info
-    ret = avformat_find_stream_info(fmt, nullptr);
-    if (ret < 0)
+    auto encoder = static_cast<BmpEncoderContext *>(av_mallocz(sizeof(BmpEncoderContext)));
+    int src_width, src_height;
+    fr_get_stream_props(&src_width, &src_height, reader);
+    ret = bmp_context_open(encoder, AV_CODEC_ID_PNG, src_width, src_height, AV_PIX_FMT_RGB24);
+    if (ret)
     {
-        fprintf(stderr, "avformat_find_stream_info: %s\n", av_err2str(ret));
-        exit(-1);
-    }
-    printf("loaded stream info\n");
-
-    // find video stream
-    ret = av_find_best_stream(fmt, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
-    if (ret < 0)
-    {
-        fprintf(stderr, "av_find_best_stream: %s\n", av_err2str(ret));
-        exit(-1);
-    }
-    auto stream_idx = ret;
-    auto stream = fmt->streams[stream_idx];
-    printf("using stream #%d\n", stream_idx);
-
-    // create decoder
-    auto dec_codec = avcodec_find_decoder(stream->codecpar->codec_id);
-    auto decoder = avcodec_alloc_context3(dec_codec);
-    avcodec_parameters_to_context(decoder, stream->codecpar);
-    ret = avcodec_open2(decoder, dec_codec, nullptr);
-    if (ret != 0)
-    {
-        printf("avcodec_open2(decoder): %s\n", av_err2str(ret));
-        exit(-1);
-    }
-    printf("opened stream #%d with codec %s\n", stream_idx, avcodec_get_name(dec_codec->id));
-
-    // create encoder
-    auto enc_ctx = static_cast<BmpEncoderContext *>(av_mallocz(sizeof(BmpEncoderContext)));
-    ret = bmp_context_open(enc_ctx, AV_CODEC_ID_PNG, decoder->width, decoder->height, AV_PIX_FMT_RGB24);
-    if (ret != 0)
-    {
-        fprintf(stderr, "bmp_context_open: %s (%d)\n", enc_ctx->last_error_str, enc_ctx->last_error);
+        fprintf(stderr, "bmp_context_open (step %d): %s (%d)\n", ret, encoder->last_error_str, encoder->last_error);
         return -1;
     }
-    auto encoder = enc_ctx->enc;
-    printf("create output encoder %s\n", avcodec_get_name(encoder->codec_id));
+    printf("bmp_context_open: ok\n");
 
     // TODO: re-mux
-    int frame_count = 0;
     auto scaler = static_cast<ScalerContext *>(av_mallocz(sizeof(ScalerContext)));
     auto src_frame = av_frame_alloc();
-    auto pkt = av_packet_alloc();
-    while (frame_count++ < 20)
+
+    for (auto i = 0; i < 20; i++)
     {
-        if (av_read_frame(fmt, pkt) < 0)
+        ret = fr_receive_frame(src_frame, reader);
+        if (ret != 0)
         {
-            fprintf(stderr, "av_read_frame: end of file");
-            break;
+            fprintf(stderr, "fr_receive_frame (step %d): %s (%d)", ret, reader->last_error_str, reader->last_error);
+            goto shutdown;
         }
 
-        if (pkt->stream_index != stream_idx)
-        {
-            printf("$%4d: skipping frame of non-candidate stream\n", frame_count);
-            continue;
-        }
+        auto frame = av_frame_alloc();
+        scaler->out_h = frame->height = src_frame->height;
+        scaler->out_w = frame->width = src_frame->width;
+        scaler->out_fmt = frame->format = AV_PIX_FMT_RGB24;
+        av_frame_get_buffer(frame, 32);
+        scaler_scale(src_frame, frame, scaler);
 
-        avcodec_send_packet(decoder, pkt);
+        auto out_pkt = av_packet_alloc();
+        scaler_scale(src_frame, frame, scaler);
 
-        while (true)
-        {
-            auto recv = avcodec_receive_frame(decoder, src_frame);
+        char out_file[64];
+        sprintf(out_file, "%d.png", i);
+        auto f = fopen(out_file, "w");
+        fwrite(out_pkt->data, sizeof(char), out_pkt->size, f);
+        fclose(f);
+        printf("$%4d: written file %s\n", i, out_file);
 
-            if (AVERROR(recv) == EAGAIN)
-                break;
-
-            if (recv != 0)
-            {
-                fprintf(stderr, "avcodec_receive_frame: %s (%d)\n", av_err2str(recv), recv);
-                goto shutdown;
-            }
-
-            // produce output frame
-            auto frame = av_frame_alloc();
-            scaler->out_h = frame->height = src_frame->height;
-            scaler->out_w = frame->width = src_frame->width;
-            scaler->out_fmt = frame->format = AV_PIX_FMT_RGB24;
-            av_frame_get_buffer(frame, 32);
-            scaler_scale(src_frame, frame, scaler);
-
-            // encode output frame
-            auto out_pkt = av_packet_alloc();
-            avcodec_send_frame(encoder, frame);
-            avcodec_receive_packet(encoder, out_pkt);
-
-            // write to file
-            char out_file[64];
-            sprintf(out_file, "%d.png", frame_count);
-            auto f = fopen(out_file, "w");
-            fwrite(out_pkt->data, sizeof(char), out_pkt->size, f);
-            fclose(f);
-            printf("$%4d: written file %s\n", frame_count, out_file);
-
-            // release
-            av_packet_free(&out_pkt);
-            av_frame_free(&frame);
-        }
+        av_packet_free(&out_pkt);
+        av_frame_free(&frame);
     }
 
 shutdown:
-    avcodec_close(decoder);
-    avcodec_free_context(&decoder);
-    avformat_close_input(&fmt);
-    avformat_free_context(fmt);
+    bmp_context_free(encoder);
+    scaler_free(scaler);
+    fr_context_free(reader);
 
     return 0;
 }
