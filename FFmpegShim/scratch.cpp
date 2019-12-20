@@ -1,4 +1,5 @@
-extern "C" {
+extern "C"
+{
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>
@@ -7,10 +8,12 @@ extern "C" {
 #include "bmp_encoder.cpp"
 #include "scaler.cpp"
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
     int ret;
 
-    if (argc <= 1) {
+    if (argc <= 1)
+    {
         fprintf(stderr, "input file expected");
         return -1;
     }
@@ -21,7 +24,8 @@ int main(int argc, char *argv[]) {
     // open input file
     AVFormatContext *fmt = nullptr;
     ret = avformat_open_input(&fmt, file, nullptr, nullptr);
-    if (ret) {
+    if (ret)
+    {
         fprintf(stderr, "avformat_open_input: %s\n", av_err2str(ret));
         return -1;
     }
@@ -29,7 +33,8 @@ int main(int argc, char *argv[]) {
 
     // retrieve stream info
     ret = avformat_find_stream_info(fmt, nullptr);
-    if (ret < 0) {
+    if (ret < 0)
+    {
         fprintf(stderr, "avformat_find_stream_info: %s\n", av_err2str(ret));
         exit(-1);
     }
@@ -37,7 +42,8 @@ int main(int argc, char *argv[]) {
 
     // find video stream
     ret = av_find_best_stream(fmt, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
-    if (ret < 0) {
+    if (ret < 0)
+    {
         fprintf(stderr, "av_find_best_stream: %s\n", av_err2str(ret));
         exit(-1);
     }
@@ -50,7 +56,8 @@ int main(int argc, char *argv[]) {
     auto decoder = avcodec_alloc_context3(dec_codec);
     avcodec_parameters_to_context(decoder, stream->codecpar);
     ret = avcodec_open2(decoder, dec_codec, nullptr);
-    if (ret != 0) {
+    if (ret != 0)
+    {
         printf("avcodec_open2(decoder): %s\n", av_err2str(ret));
         exit(-1);
     }
@@ -59,7 +66,8 @@ int main(int argc, char *argv[]) {
     // create encoder
     auto enc_ctx = static_cast<BmpEncoderContext *>(av_mallocz(sizeof(BmpEncoderContext)));
     ret = bmp_context_open(enc_ctx, AV_CODEC_ID_PNG, decoder->width, decoder->height, AV_PIX_FMT_RGB24);
-    if (ret != 0) {
+    if (ret != 0)
+    {
         fprintf(stderr, "bmp_context_open: %s (%d)\n", enc_ctx->last_error_str, enc_ctx->last_error);
         return -1;
     }
@@ -71,26 +79,31 @@ int main(int argc, char *argv[]) {
     auto scaler = static_cast<ScalerContext *>(av_mallocz(sizeof(ScalerContext)));
     auto src_frame = av_frame_alloc();
     auto pkt = av_packet_alloc();
-    while (frame_count++ < 20) {
-        if (av_read_frame(fmt, pkt) < 0) {
+    while (frame_count++ < 20)
+    {
+        if (av_read_frame(fmt, pkt) < 0)
+        {
             fprintf(stderr, "av_read_frame: end of file");
             break;
         }
 
-        if (pkt->stream_index != stream_idx) {
+        if (pkt->stream_index != stream_idx)
+        {
             printf("$%4d: skipping frame of non-candidate stream\n", frame_count);
             continue;
         }
 
         avcodec_send_packet(decoder, pkt);
 
-        while (true) {
+        while (true)
+        {
             auto recv = avcodec_receive_frame(decoder, src_frame);
 
             if (AVERROR(recv) == EAGAIN)
                 break;
 
-            if (recv != 0) {
+            if (recv != 0)
+            {
                 fprintf(stderr, "avcodec_receive_frame: %s (%d)\n", av_err2str(recv), recv);
                 goto shutdown;
             }
@@ -122,7 +135,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    shutdown:
+shutdown:
     avcodec_close(decoder);
     avcodec_free_context(&decoder);
     avformat_close_input(&fmt);
