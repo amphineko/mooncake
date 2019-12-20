@@ -11,10 +11,10 @@ add_definitions(-D__STDC_CONSTANT_MACROS)
 
 link_directories(lib)
 
-find_library(AVCODEC_LIBRARY avcodec)
-find_library(AVFORMAT_LIBRARY avformat)
-find_library(AVUTIL_LIBRARY avutil)
-find_library(SWSCALE_LIBRARY swscale)
+find_library(AVCODEC_LIBRARY avcodec HINTS lib)
+find_library(AVFORMAT_LIBRARY avformat HINTS lib)
+find_library(AVUTIL_LIBRARY avutil HINTS lib)
+find_library(SWSCALE_LIBRARY swscale HINTS lib)
 
 set(FFMPEG_LIBRARY ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWSCALE_LIBRARY})
 
