@@ -4,6 +4,8 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
+#include "bmp_encoder.cpp"
+
 int main(int argc, char *argv[]) {
     int ret;
 
@@ -54,18 +56,14 @@ int main(int argc, char *argv[]) {
     printf("opened stream #%d with codec %s\n", stream_idx, avcodec_get_name(dec_codec->id));
 
     // create encoder
-    auto enc_codec = avcodec_find_encoder(AV_CODEC_ID_PNG);
-    auto encoder = avcodec_alloc_context3(enc_codec);
-    encoder->height = decoder->height;
-    encoder->width = decoder->width;
-    encoder->pix_fmt = AV_PIX_FMT_RGB24;
-    encoder->time_base = (AVRational) {1, 1};
-    ret = avcodec_open2(encoder, enc_codec, nullptr);
+    auto enc_ctx = static_cast<BmpEncoderContext *>(av_mallocz(sizeof(BmpEncoderContext)));
+    ret = bmp_context_open(enc_ctx, AV_CODEC_ID_PNG, decoder->width, decoder->height, AV_PIX_FMT_RGB24);
     if (ret != 0) {
-        printf("avcodec_open2(encoder): %s\n", av_err2str(ret));
-        exit(-1);
+        fprintf(stderr, "bmp_context_open: %s (%d)\n", enc_ctx->last_error_str, enc_ctx->last_error);
+        return -1;
     }
-    printf("create output encoder %s\n", avcodec_get_name(enc_codec->id));
+    auto encoder = enc_ctx->enc;
+    printf("create output encoder %s\n", avcodec_get_name(encoder->codec_id));
 
     // TODO: re-mux
     int frame_count = 0;
