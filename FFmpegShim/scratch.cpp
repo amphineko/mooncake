@@ -5,6 +5,7 @@ extern "C" {
 }
 
 #include "bmp_encoder.cpp"
+#include "scaler.cpp"
 
 int main(int argc, char *argv[]) {
     int ret;
@@ -67,7 +68,7 @@ int main(int argc, char *argv[]) {
 
     // TODO: re-mux
     int frame_count = 0;
-    SwsContext *scaler = nullptr;
+    auto scaler = static_cast<ScalerContext *>(av_mallocz(sizeof(ScalerContext)));
     auto src_frame = av_frame_alloc();
     auto pkt = av_packet_alloc();
     while (frame_count++ < 20) {
@@ -94,21 +95,13 @@ int main(int argc, char *argv[]) {
                 goto shutdown;
             }
 
-            // allocate output frame
+            // produce output frame
             auto frame = av_frame_alloc();
-            frame->height = src_frame->height;
-            frame->width = src_frame->width;
-            frame->format = AV_PIX_FMT_RGB24;
+            scaler->out_h = frame->height = src_frame->height;
+            scaler->out_w = frame->width = src_frame->width;
+            scaler->out_fmt = frame->format = AV_PIX_FMT_RGB24;
             av_frame_get_buffer(frame, 32);
-
-            // scale to output pixel format
-            auto src_fmt = static_cast<AVPixelFormat >( src_frame->format);
-            auto out_fmt = static_cast<AVPixelFormat >(frame->format);
-            scaler = sws_getCachedContext(scaler,
-                                          src_frame->width, src_frame->height, src_fmt,
-                                          frame->width, frame->height, out_fmt,
-                                          0, nullptr, nullptr, nullptr);
-            sws_scale(scaler, src_frame->data, src_frame->linesize, 0, src_frame->height, frame->data, frame->linesize);
+            scaler_scale(src_frame, frame, scaler);
 
             // encode output frame
             auto out_pkt = av_packet_alloc();
