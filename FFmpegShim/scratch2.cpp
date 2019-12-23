@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
 
             char filename[32];
             sprintf(filename, "frame-%d.png", frame_count);
-            auto f = fopen(filename, "w");
+            auto f = fopen(filename, "wb");
             fwrite(out_pkt->data, sizeof(out_pkt->data[0]), out_pkt->size, f);
             av_packet_free(&out_pkt);
             fclose(f);

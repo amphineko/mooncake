@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 
         char out_file[64];
         sprintf(out_file, "frame-%d.png", i);
-        auto f = fopen(out_file, "w");
+        auto f = fopen(out_file, "wb");
         fwrite(pkt->data, sizeof(char), pkt->size, f);
         fclose(f);
         av_packet_free(&pkt);
