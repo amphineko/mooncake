@@ -5,26 +5,30 @@ struct FrameReaderContext
 {
     AVFormatContext *fmt;
 
-    AVCodecContext *decoder;
-    AVCodec *video_codec;
+    AVCodecContext *dec;
+    AVCodec *dec_codec;
 
-    AVPacket *pkt;
     int stream_index;
 
     int last_error;
     char *last_error_str;
 };
 
+void fr_dump_format(FrameReaderContext *ctx)
+{
+    av_dump_format(ctx->fmt, ctx->stream_index, nullptr, 0);
+}
+
 LIBRARY_API(void) fr_context_free(FrameReaderContext *ctx)
 {
-    avcodec_free_context(&ctx->decoder);
-    av_freep(&ctx->video_codec);
+    avcodec_free_context(&ctx->dec);
     avformat_free_context(ctx->fmt);
 }
 
 LIBRARY_API(int) fr_context_open(char *url, FrameReaderContext *ctx)
 {
     // open input url
+    ctx->fmt = nullptr;
     ctx->last_error = avformat_open_input(&ctx->fmt, url, nullptr, nullptr);
     CHECK_ERROR(-1, ctx->last_error, ctx)
 
@@ -38,14 +42,14 @@ LIBRARY_API(int) fr_context_open(char *url, FrameReaderContext *ctx)
     auto stream = ctx->fmt->streams[ctx->stream_index];
 
     // initialize decoder
-    ctx->video_codec = avcodec_find_decoder(stream->codecpar->codec_id);
-    ctx->decoder = avcodec_alloc_context3(ctx->video_codec);
-    avcodec_parameters_to_context(ctx->decoder, stream->codecpar);
-    ctx->last_error = avcodec_open2(ctx->decoder, ctx->video_codec, nullptr);
-    CHECK_ERROR(-4, ctx->last_error != 0, ctx);
+    auto dec_par = stream->codecpar;
+    auto dec_id = dec_par->codec_id;
+    ctx->dec_codec = avcodec_find_decoder(dec_id);
+    ctx->dec = avcodec_alloc_context3(ctx->dec_codec);
+    avcodec_parameters_to_context(ctx->dec, dec_par);
 
-    // allocate receiving packet
-    ctx->pkt = av_packet_alloc();
+    ctx->last_error = avcodec_open2(ctx->dec, ctx->dec_codec, nullptr);
+    CHECK_ERROR(-4, ctx->last_error != 0, ctx);
 
     // start playback
     av_read_play(ctx->fmt);
@@ -57,28 +61,30 @@ LIBRARY_API(int) fr_receive_frame(AVFrame *frame, FrameReaderContext *ctx)
 {
     while (true)
     {
-        ctx->last_error = av_read_frame(ctx->fmt, ctx->pkt);
+        // try to receive buffered decoded frame
+        ctx->last_error = avcodec_receive_frame(ctx->dec, frame);
+        if (ctx->last_error == 0)
+            return 0; // got new frame
+        CHECK_ERROR(-3, ctx->last_error != AVERROR(EAGAIN), ctx)
+
+        // read/receive raw packet
+        auto pkt = av_packet_alloc();
+        ctx->last_error = av_read_frame(ctx->fmt, pkt);
         CHECK_ERROR(-1, ctx->last_error != 0, ctx)
-        if (ctx->pkt->stream_index != ctx->stream_index)
-        {
-            printf("skipping frame at %lld\n", ctx->pkt->dts);
-            continue; // skip non-candidate frames
-        }
-        printf("> av_read_frame: ok\n");
+        if (pkt->stream_index != ctx->stream_index)
+            goto skip_frame; // skip non-candidate frames
 
-        ctx->last_error = avcodec_send_packet(ctx->decoder, ctx->pkt);
+        // feed raw packet to decoder
+        ctx->last_error = avcodec_send_packet(ctx->dec, pkt);
         CHECK_ERROR(-2, ctx->last_error != 0, ctx)
-        printf("> avcodec_send_packet: ok\n");
 
-        ctx->last_error = avcodec_receive_frame(ctx->decoder, frame);
-        CHECK_ERROR(-3, ctx->last_error != 0, ctx)
-        printf("> avcodec_receive_frame: ok\n");
-        return 0;
+    skip_frame:
+        av_packet_free(&pkt);
     }
 }
 
 LIBRARY_API(void) fr_get_stream_props(int *w, int *h, FrameReaderContext *ctx)
 {
-    *w = ctx->decoder->width;
-    *h = ctx->decoder->height;
+    *w = ctx->dec->width;
+    *h = ctx->dec->height;
 }

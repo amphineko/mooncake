@@ -25,3 +25,7 @@ target_include_directories(ffmpeg_shim PRIVATE include)
 add_executable(scratch scratch.cpp)
 target_link_libraries(scratch PRIVATE ${FFMPEG_LIBRARY})
 target_include_directories(scratch PRIVATE include)
+
+add_executable(scratch2 scratch2.cpp)
+target_link_libraries(scratch2 PRIVATE ${FFMPEG_LIBRARY})
+target_include_directories(scratch2 PRIVATE include)

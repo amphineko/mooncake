@@ -9,6 +9,9 @@ extern "C"
 #include "frame_reader.cpp"
 #include "scaler.cpp"
 
+const AVCodecID OUT_CODEC_ID = AV_CODEC_ID_PNG;
+const AVPixelFormat OUT_PIXEL_FORMAT = AV_PIX_FMT_RGB24;
+
 int main(int argc, char *argv[])
 {
     int ret;
@@ -34,7 +37,7 @@ int main(int argc, char *argv[])
     auto encoder = static_cast<BmpEncoderContext *>(av_mallocz(sizeof(BmpEncoderContext)));
     int src_width, src_height;
     fr_get_stream_props(&src_width, &src_height, reader);
-    ret = bmp_context_open(encoder, AV_CODEC_ID_PNG, src_width, src_height, AV_PIX_FMT_RGB24);
+    ret = bmp_context_open(encoder, OUT_CODEC_ID, src_width, src_height, OUT_PIXEL_FORMAT);
     if (ret)
     {
         fprintf(stderr, "bmp_context_open (step %d): %s (%d)\n", ret, encoder->last_error_str, encoder->last_error);
@@ -42,38 +45,38 @@ int main(int argc, char *argv[])
     }
     printf("bmp_context_open: ok\n");
 
-    // TODO: re-mux
     auto scaler = static_cast<ScalerContext *>(av_mallocz(sizeof(ScalerContext)));
-    auto src_frame = av_frame_alloc();
-
     for (auto i = 0; i < 20; i++)
     {
-        ret = fr_receive_frame(src_frame, reader);
+        auto src = av_frame_alloc();
+        ret = fr_receive_frame(src, reader);
         if (ret != 0)
         {
             fprintf(stderr, "fr_receive_frame (step %d): %s (%d)", ret, reader->last_error_str, reader->last_error);
             goto shutdown;
         }
 
-        auto frame = av_frame_alloc();
-        scaler->out_h = frame->height = src_frame->height;
-        scaler->out_w = frame->width = src_frame->width;
-        scaler->out_fmt = frame->format = AV_PIX_FMT_RGB24;
-        av_frame_get_buffer(frame, 32);
-        scaler_scale(src_frame, frame, scaler);
+        auto out = av_frame_alloc();
+        out->height = src->height;
+        out->width = src->width;
+        out->format = OUT_PIXEL_FORMAT;
+        av_frame_get_buffer(out, 32);
 
-        auto out_pkt = av_packet_alloc();
-        scaler_scale(src_frame, frame, scaler);
+        scaler_scale(src, out, scaler);
+        av_frame_free(&src);
+
+        auto pkt = av_packet_alloc();
+        bmp_encode(out, pkt, encoder);
+        av_frame_free(&out);
 
         char out_file[64];
-        sprintf(out_file, "%d.png", i);
+        sprintf(out_file, "frame-%d.png", i);
         auto f = fopen(out_file, "w");
-        fwrite(out_pkt->data, sizeof(char), out_pkt->size, f);
+        fwrite(pkt->data, sizeof(char), pkt->size, f);
         fclose(f);
-        printf("$%4d: written file %s\n", i, out_file);
+        av_packet_free(&pkt);
 
-        av_packet_free(&out_pkt);
-        av_frame_free(&frame);
+        printf("$%4d: written file %s\n", i, out_file);
     }
 
 shutdown:
