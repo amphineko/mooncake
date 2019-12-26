@@ -1,7 +1,9 @@
 ﻿using System;
+using System.IO;
 using AtomicAkarin.LotusCore;
 using AtomicAkarin.LotusCore.Abstractions;
 using AtomicAkarin.LotusCore.Handles;
+using AtomicAkarin.LotusCore.Helpers;
 
 namespace LotusCoreTest
 {
@@ -47,6 +49,11 @@ namespace LotusCoreTest
 
                 using var packet = encoder.Encode(output);
                 Console.WriteLine("FrameEncoder.Encode: ok");
+
+                using var stream = new AVPacketStream(packet);
+                using var file = File.OpenWrite($"frame-{i}.jpg");
+                stream.CopyTo(file);
+                file.Flush();
             }
         }
     }

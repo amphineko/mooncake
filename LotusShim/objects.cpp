@@ -1,4 +1,5 @@
 #include "library.h"
+#include <sys/param.h>
 
 extern "C"
 {
@@ -39,4 +40,14 @@ LIBRARY_API(AVPacket *) lotus_packet_alloc()
 LIBRARY_API(void) lotus_packet_free(AVPacket *pkt)
 {
     av_packet_free(&pkt);
+}
+
+LIBRARY_API(int) lotus_packet_len(AVPacket *pkt)
+{
+    return pkt->size;
+}
+
+LIBRARY_API(void) lotus_packet_read(char *buf, int offset, int pos, int count, AVPacket *pkt)
+{
+    memcpy(buf + offset, pkt->data + pos, count);
 }
