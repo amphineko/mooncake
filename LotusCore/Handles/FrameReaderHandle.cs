@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using AtomicAkarin.LotusCore.Handles;
+using System.Threading.Tasks;
+using AtomicAkarin.LotusCore.Abstractions;
 using Microsoft.Win32.SafeHandles;
 
-namespace AtomicAkarin.LotusCore
+namespace AtomicAkarin.LotusCore.Handles
 {
-    public class FrameReaderHandle : SafeHandleZeroOrMinusOneIsInvalid
+    public class FrameReaderHandle : SafeHandleZeroOrMinusOneIsInvalid, IFrameReader
     {
         public FrameReaderHandle() : base(true)
         {
@@ -50,10 +51,31 @@ namespace AtomicAkarin.LotusCore
         private static extern void FrameReaderGetVideoProps(out int w, out int h, out int pixFmt, out IntPtr codecName,
             IntPtr context);
 
+        // LIBRARY_API(int) fr_read_frame(AVFrame *out, frame_reader_ctx_t *ctx)
+        [DllImport(ShimUtil.LibraryName, EntryPoint = "fr_read_frame")]
+        private static extern int FrameReaderReadFrame(AVFrameHandle frame, FrameReaderHandle context);
+
         protected override bool ReleaseHandle()
         {
             FrameReaderContextClose(handle);
             return true;
+        }
+
+        public AVFrameHandle ReadFrame()
+        {
+            var frame = new AVFrameHandle();
+            try
+            {
+                var ret = FrameReaderReadFrame(frame, this);
+                if (ret != 0)
+                    LastErrorContext.FromIntPtr(handle).Throw();
+                return frame;
+            }
+            catch
+            {
+                frame.Dispose();
+                throw;
+            }
         }
     }
 }

@@ -70,3 +70,32 @@ LIBRARY_API(void) fr_get_video_props(int *w, int *h, int *pix_fmt, const char **
     *pix_fmt = dec->pix_fmt;
     *codec_name = avcodec_get_name(dec->codec_id);
 }
+
+LIBRARY_API(int) fr_read_frame(AVFrame *out, frame_reader_ctx_t *ctx)
+{
+    auto dec = ctx->dec;
+    auto fmt = ctx->fmt;
+    auto stream_index = ctx->stream_index;
+
+    while (true)
+    {
+        // try receiving one decoded frame
+        ctx->last_error = avcodec_receive_frame(dec, out);
+        if (ctx->last_error == 0) // got one frame from decoder
+            return 0;
+        if (ctx->last_error != AVERROR(EAGAIN))
+            CHECK_LAV_ERROR_NON_ZERO(-1, "avcodec_receive_frame", ctx)
+
+        // read raw packet
+        auto pkt = av_packet_alloc();
+        ctx->last_error = av_read_frame(fmt, pkt);
+        CHECK_LAV_ERROR_NON_ZERO(-2, "av_read_frame", ctx)
+        if (pkt->stream_index != stream_index) // skip non-candidate stream (e.g audio stream)
+            continue;
+
+        // feed decoder with raw packet
+        ctx->last_error = avcodec_send_packet(dec, pkt);
+        CHECK_LAV_ERROR_NON_ZERO(-3, "avcodec_send_packet", ctx)
+        av_packet_free(&pkt);
+    }
+}
