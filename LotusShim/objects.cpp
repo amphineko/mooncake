@@ -16,6 +16,13 @@ LIBRARY_API(void) lotus_frame_free(AVFrame *frame)
     av_frame_free(&frame);
 }
 
+LIBRARY_API(void) lotus_frame_get_props(int *w, int *h, int *pix_fmt, AVFrame *frame)
+{
+    *w = frame->width;
+    *h = frame->height;
+    *pix_fmt = frame->format;
+}
+
 LIBRARY_API(void) lotus_frame_init(int w, int h, int pix_fmt, AVFrame *frame)
 {
     frame->width = w;

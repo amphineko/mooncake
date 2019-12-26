@@ -24,6 +24,12 @@ namespace AtomicAkarin.LotusCore.Handles
         [DllImport(ShimUtil.LibraryName, EntryPoint = "lotus_frame_init")]
         private static extern void LotusFrameInit(int w, int h, int pixFmt, AVFrameHandle frame);
 
+        /// <summary>
+        /// LIBRARY_API(void) lotus_frame_get_props(int *w, int *h, int *pix_fmt, AVFrame *frame)
+        /// </summary>
+        [DllImport(ShimUtil.LibraryName, EntryPoint = "lotus_frame_get_props")]
+        private static extern void LotusFrameGetProps(ref int width, ref int height, ref int pixFmt, AVFrameHandle f);
+
         public AVFrameHandle(IntPtr pointer, bool ownsHandle) : base(ownsHandle)
         {
             SetHandle(pointer);
@@ -36,6 +42,17 @@ namespace AtomicAkarin.LotusCore.Handles
         public AVFrameHandle(int width, int height, AVPixelFormat pixelFormat) : this()
         {
             Initialize(width, height, pixelFormat);
+        }
+
+        public void GetProperties(out int width, out int height, out AVPixelFormat pixelFormat)
+        {
+            width = height = 0;
+            var rawPixelFormat = 0;
+
+            LotusFrameGetProps(ref width, ref height, ref rawPixelFormat, this);
+            pixelFormat = Enum.IsDefined(typeof(AVPixelFormat), rawPixelFormat)
+                ? (AVPixelFormat) rawPixelFormat
+                : AVPixelFormat.Unknown;
         }
 
         private void Initialize(int width, int height, AVPixelFormat pixelFormat)
