@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using AtomicAkarin.LotusCore.Abstractions;
 using Microsoft.Win32.SafeHandles;
 
@@ -11,6 +10,23 @@ namespace AtomicAkarin.LotusCore.Handles
         public FrameReaderHandle() : base(true)
         {
             SetHandle(FrameReaderContextAllocate());
+        }
+
+        public AVFrameHandle ReadFrame()
+        {
+            var frame = new AVFrameHandle();
+            try
+            {
+                var ret = FrameReaderReadFrame(frame, this);
+                if (ret != 0)
+                    LastErrorContext.FromIntPtr(handle).Throw();
+                return frame;
+            }
+            catch
+            {
+                frame.Dispose();
+                throw;
+            }
         }
 
         public VideoProperties GetVideoProperties()
@@ -59,23 +75,6 @@ namespace AtomicAkarin.LotusCore.Handles
         {
             FrameReaderContextClose(handle);
             return true;
-        }
-
-        public AVFrameHandle ReadFrame()
-        {
-            var frame = new AVFrameHandle();
-            try
-            {
-                var ret = FrameReaderReadFrame(frame, this);
-                if (ret != 0)
-                    LastErrorContext.FromIntPtr(handle).Throw();
-                return frame;
-            }
-            catch
-            {
-                frame.Dispose();
-                throw;
-            }
         }
     }
 }

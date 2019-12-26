@@ -1,8 +1,6 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.ComTypes;
 using AtomicAkarin.LotusCore.Handles;
 
 namespace AtomicAkarin.LotusCore.Helpers
@@ -40,13 +38,13 @@ namespace AtomicAkarin.LotusCore.Helpers
         }
 
         /// <summary>
-        /// LIBRARY_API(int) lotus_packet_len(AVPacket *pkt)
+        ///     LIBRARY_API(int) lotus_packet_len(AVPacket *pkt)
         /// </summary>
         [DllImport(ShimUtil.LibraryName, EntryPoint = "lotus_packet_len")]
         private static extern int LotusPacketLen(AVPacketHandle packet);
 
         /// <summary>
-        /// LIBRARY_API(void) lotus_packet_read(char *buf, int offset, int pos, int count, AVPacket *pkt)
+        ///     LIBRARY_API(void) lotus_packet_read(char *buf, int offset, int pos, int count, AVPacket *pkt)
         /// </summary>
         [DllImport(ShimUtil.LibraryName, EntryPoint = "lotus_packet_read")]
         private static extern int LotusPacketRead(byte[] buffer, int offset, int pos, int count, AVPacketHandle pkt);
