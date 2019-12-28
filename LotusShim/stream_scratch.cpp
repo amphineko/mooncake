@@ -7,7 +7,9 @@ extern "C"
 #include <libavutil/error.h>
 }
 
+#include "frame_encoder.cpp"
 #include "frame_reader.cpp"
+#include "frame_scaler.cpp"
 #include "stream.cpp"
 
 int read_stream(void *opaque, unsigned char *buf, int size)
@@ -69,6 +71,9 @@ long long seek_stream(void *opaque, long long offset, int whence)
     else                                                                                                               \
         printf("%s: ok (%d)\n", step, ret);
 
+#define OUTPUT_CODEC_ID AV_CODEC_ID_MJPEG
+#define OUTPUT_PIXEL_FORMAT AV_PIX_FMT_YUVJ420P
+
 int main(int arg_count, char *args[])
 {
     int ret;
@@ -91,6 +96,52 @@ int main(int arg_count, char *args[])
     auto reader = fr_context_alloc();
     ret = fr_context_open2(io, filename, reader);
     EXIT_ERROR(ret, ret != 0, "fr_context_open2");
+
+    int width, height, pix_fmt;
+    const char *codec_name;
+    fr_get_video_props(&width, &height, &pix_fmt, &codec_name, reader);
+    printf("fr_get_video_props: w%d h%d pix_fmt%d codec_name=%s\n", width, height, pix_fmt, codec_name);
+
+    auto encoder = encoder_context_create();
+    encoder_context_open(OUTPUT_CODEC_ID, width, height, OUTPUT_PIXEL_FORMAT, encoder);
+
+    auto scaler = scaler_context_alloc();
+
+    for (auto i = 0; i <= 1000; i += 1)
+    {
+        auto frame = av_frame_alloc();
+        ret = fr_read_frame(frame, reader);
+        if (ret != 0)
+        {
+            // prevent unnecessary print
+            EXIT_ERROR(ret, ret != 0, "fr_read_frame")
+        }
+
+        if (i % 100 != 0)
+        {
+            av_frame_free(&frame);
+            continue;
+        }
+
+        auto out = av_frame_alloc();
+        out->width = frame->width;
+        out->height = frame->height;
+        out->format = OUTPUT_PIXEL_FORMAT;
+        av_frame_get_buffer(out, 32);
+        scaler_scale(out, frame, scaler);
+        av_frame_free(&frame);
+
+        auto pkt = av_packet_alloc();
+        ret = encoder_encode(pkt, out, encoder);
+        EXIT_ERROR(ret, ret != 0, "encoder_encode");
+        av_frame_free(&out);
+
+        char out_filename[64];
+        sprintf(out_filename, "frame-%d.jpg", i);
+        auto f = fopen(out_filename, "wb");
+        fwrite(pkt->data, sizeof(char), pkt->size, f);
+        fclose(f);
+    }
 
     fr_context_close(reader);
 
