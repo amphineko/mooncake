@@ -12,8 +12,9 @@ libav/libswscale-based RTSP client for .NET Core
 
 - [X] RTSP client via **lavf**
 - [X] Receives frames via **lavc**
-- [ ] Convert colorspace into RGB via **swscale**
-- [ ] Dump **AVFrame** into **SixLabors.ImageSharp.Image**
+- [X] Convert between pixel formats via **swscale**
+- [X] Encapsule **AVPacket** as **System.IO.Stream**
+- [ ] ~Dump **AVFrame** into **SixLabors.ImageSharp.Image**~ *(feature not longer required)*
 ---
 - [ ] Re-encode into **VP9** via **lavc**
 - [ ] Re-mux into **WebM** via **lavf**
