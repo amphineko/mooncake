@@ -2,6 +2,8 @@
 
 libav/libswscale-based RTSP client for .NET Core
 
+This project is still under development, you may check out other branches for latest progress.
+
 ## Modules
 
 - Lotus(Core/Shim): Handles libav/libswscale invocations and manages related structures  
