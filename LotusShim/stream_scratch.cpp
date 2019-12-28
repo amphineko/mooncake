@@ -88,15 +88,11 @@ int main(int arg_count, char *args[])
     auto buf = static_cast<unsigned char *>(av_mallocz(AV_INPUT_BUFFER_MIN_SIZE + AV_INPUT_BUFFER_PADDING_SIZE));
     auto io = avio_alloc_context(buf, AV_INPUT_BUFFER_MIN_SIZE, 0, &stream, read_stream, nullptr, seek_stream);
 
-    auto fmt = avformat_alloc_context();
-    fmt->pb = io;
-    ret = avformat_open_input(&fmt, filename, nullptr, nullptr);
-    EXIT_ERROR(ret, ret != 0, "avformat_open_input")
+    auto reader = fr_context_alloc();
+    ret = fr_context_open2(io, filename, reader);
+    EXIT_ERROR(ret, ret != 0, "fr_context_open2");
 
-    ret = avformat_find_stream_info(fmt, nullptr);
-    EXIT_ERROR(ret, ret < 0, "avformat_find_stream_info")
-
-    avformat_close_input(&fmt);
+    fr_context_close(reader);
 
     return 0;
 }
