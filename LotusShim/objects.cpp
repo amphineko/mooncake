@@ -1,5 +1,4 @@
 #include "library.h"
-#include <sys/param.h>
 
 extern "C"
 {
