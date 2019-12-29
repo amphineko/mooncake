@@ -2,6 +2,7 @@
 using System.IO;
 using AtomicAkarin.LotusCore.Handles;
 using AtomicAkarin.LotusCore.Helpers;
+using AtomicAkarin.LotusCore.IO;
 
 namespace LotusCoreTest
 {
@@ -16,8 +17,12 @@ namespace LotusCoreTest
             var url = args[0];
             Console.WriteLine($"Trying Url: {url}");
 
+            var fileStream = File.OpenRead(url);
+            var io = new StreamIOContext(fileStream);
+
             using var frameReader = new FrameReaderHandle();
-            frameReader.Open(url);
+//            frameReader.Open(url);
+            frameReader.Open(io.GetIoContext(), url);
             var props = frameReader.GetVideoProperties();
             Console.WriteLine(
                 $"FrameReader.GetVideoProperties: {props.CodecName} {props.Width}x{props.Height} {props.PixelFormat}");
@@ -28,9 +33,11 @@ namespace LotusCoreTest
             using var encoder = new FrameEncoderHandle(OutputCodecId, props.Width, props.Height, OutputPixelFormat);
             Console.WriteLine("FrameEncoder.Ctor: ok");
 
-            for (var i = 0; i < 2; i++)
+            for (var i = 0; i < 1000; i++)
             {
                 using var frame = frameReader.ReadFrame();
+                if (i % 100 != 0)
+                    continue;
                 Console.WriteLine("FrameReader.ReadFrame: ok");
 
                 frame.GetProperties(out var width, out var height, out var pixelFormat);

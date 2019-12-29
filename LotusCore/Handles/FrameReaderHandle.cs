@@ -50,6 +50,15 @@ namespace AtomicAkarin.LotusCore.Handles
             error.Throw();
         }
 
+        public void Open(IntPtr ioCtx, string uri)
+        {
+            if (FrameReaderContextOpen2(ioCtx, uri, handle) == 0)
+                return;
+
+            var error = LastErrorContext.FromIntPtr(handle);
+            error.Throw();
+        }
+
         // LIBRARY_API(frame_reader_ctx_t *) fr_context_alloc()
         [DllImport(ShimUtil.LibraryName, EntryPoint = "fr_context_alloc")]
         private static extern IntPtr FrameReaderContextAllocate();
@@ -61,6 +70,11 @@ namespace AtomicAkarin.LotusCore.Handles
         // LIBRARY_API(int) fr_context_open(char *url, frame_reader_ctx_t *ctx)
         [DllImport(ShimUtil.LibraryName, EntryPoint = "fr_context_open")]
         private static extern int FrameReaderContextOpen([MarshalAs(UnmanagedType.LPStr)] string url, IntPtr context);
+
+        // LIBRARY_API(int) fr_context_open2(AVIOContext *ioCtx, char *url, frame_reader_ctx_t *ctx)
+        [DllImport(ShimUtil.LibraryName, EntryPoint = "fr_context_open2")]
+        private static extern int FrameReaderContextOpen2(IntPtr ioCtx, [MarshalAs(UnmanagedType.LPStr)] string url,
+            IntPtr context);
 
         // LIBRARY_API(void) fr_get_video_props(int *w, int *h, int *pix_fmt, char *codec_name, frame_reader_ctx_t *ctx)
         [DllImport(ShimUtil.LibraryName, EntryPoint = "fr_get_video_props")]

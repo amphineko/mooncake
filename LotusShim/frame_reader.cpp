@@ -27,12 +27,13 @@ LIBRARY_API(void) fr_context_close(frame_reader_ctx_t *ctx)
     av_free(ctx);
 }
 
-LIBRARY_API(int) fr_context_open(char *url, frame_reader_ctx_t *ctx)
+LIBRARY_API(int) fr_context_open2(AVIOContext *ioCtx, char *url, frame_reader_ctx_t *ctx)
 {
     INIT_LAST_ERROR(ctx)
 
     // open input url
-    auto fmt = static_cast<AVFormatContext *>(nullptr);
+    auto fmt = avformat_alloc_context();
+    fmt->pb = ioCtx;
     ctx->last_error = avformat_open_input(&fmt, url, nullptr, nullptr);
     CHECK_LAV_ERROR_NON_ZERO(-1, "avformat_open_input", ctx)
     ctx->fmt = fmt;
@@ -60,6 +61,11 @@ LIBRARY_API(int) fr_context_open(char *url, frame_reader_ctx_t *ctx)
     CHECK_LAV_ERROR_NON_ZERO(-5, "avcodec_open2", ctx)
 
     return 0;
+}
+
+LIBRARY_API(int) fr_context_open(char *url, frame_reader_ctx_t *ctx)
+{
+    return fr_context_open2(nullptr, url, ctx);
 }
 
 LIBRARY_API(void) fr_get_video_props(int *w, int *h, int *pix_fmt, const char **codec_name, frame_reader_ctx_t *ctx)
