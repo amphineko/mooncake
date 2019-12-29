@@ -19,3 +19,7 @@ set(FFMPEG_LIBRARY ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SW
 add_library(lotus_shim SHARED objects.cpp frame_encoder.cpp frame_reader.cpp frame_scaler.cpp stream.cpp)
 target_link_libraries(lotus_shim PRIVATE ${FFMPEG_LIBRARY})
 target_include_directories(lotus_shim PRIVATE include)
+
+add_executable(stream_scratch stream_scratch.cpp)
+target_link_libraries(stream_scratch PRIVATE ${FFMPEG_LIBRARY})
+target_include_directories(stream_scratch PRIVATE include)
