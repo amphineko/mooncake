@@ -27,7 +27,8 @@ This project is still under development, you may check out other branches for la
 - [X] **AVPacketStream**: Encapulse **AVPacket** as **System.IO.Stream** _(read-only)_
 > Individual packets can be dumped out (e.g re-encode frames as JPEG and dump into .NET) as simple as `Stream.CopyTo()`.
 
-- [ ] **StreamIOContext**: Encapsule **System.IO.Stream** _(read and write)_ as **AVIOContext**
+- [X] **StreamIOContext**: Encapsule **System.IO.Stream** _(read-only)_ as **AVIOContext**
+- [ ] **StreamIOContext**: Write support
 > **FileStream** and **MemoryStream** can be provided to **AVFormat** as input source or output destination, which enables in-memory re-muxing.
 
 ---
