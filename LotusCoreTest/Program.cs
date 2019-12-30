@@ -1,7 +1,8 @@
 ﻿using System;
 using System.IO;
-using AtomicAkarin.LotusCore.Handles;
-using AtomicAkarin.LotusCore.Helpers;
+using AtomicAkarin.LotusCore.Common;
+using AtomicAkarin.LotusCore.Demux;
+using AtomicAkarin.LotusCore.Frames;
 using AtomicAkarin.LotusCore.IO;
 
 namespace LotusCoreTest

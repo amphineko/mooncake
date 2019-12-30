@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using AtomicAkarin.LotusCore.Abstractions;
+using AtomicAkarin.LotusCore.Common;
+using AtomicAkarin.LotusCore.Frames;
 using Microsoft.Win32.SafeHandles;
 
-namespace AtomicAkarin.LotusCore.Handles
+namespace AtomicAkarin.LotusCore.Demux
 {
     public class FrameReaderHandle : SafeHandleZeroOrMinusOneIsInvalid, IFrameReader
     {

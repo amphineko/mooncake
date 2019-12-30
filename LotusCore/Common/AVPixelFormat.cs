@@ -1,4 +1,4 @@
-﻿namespace AtomicAkarin.LotusCore.Handles
+﻿namespace AtomicAkarin.LotusCore.Common
 {
     public enum AVPixelFormat
     {

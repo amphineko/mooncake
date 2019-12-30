@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using AtomicAkarin.LotusCore.Common;
 using Microsoft.Win32.SafeHandles;
 
 namespace AtomicAkarin.LotusCore.IO

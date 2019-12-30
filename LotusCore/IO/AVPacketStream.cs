@@ -1,9 +1,9 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
-using AtomicAkarin.LotusCore.Handles;
+using AtomicAkarin.LotusCore.Common;
 
-namespace AtomicAkarin.LotusCore.Helpers
+namespace AtomicAkarin.LotusCore.IO
 {
     public class AVPacketStream : Stream
     {

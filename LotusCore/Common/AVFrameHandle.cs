@@ -2,7 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
-namespace AtomicAkarin.LotusCore.Handles
+namespace AtomicAkarin.LotusCore.Common
 {
     public class AVFrameHandle : SafeHandleZeroOrMinusOneIsInvalid
     {

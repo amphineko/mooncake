@@ -1,9 +1,9 @@
 using System;
 using System.Runtime.InteropServices;
-using AtomicAkarin.LotusCore.Abstractions;
+using AtomicAkarin.LotusCore.Common;
 using Microsoft.Win32.SafeHandles;
 
-namespace AtomicAkarin.LotusCore.Handles
+namespace AtomicAkarin.LotusCore.Frames
 {
     public class FrameScalerHandle : SafeHandleZeroOrMinusOneIsInvalid, IFrameScaler
     {

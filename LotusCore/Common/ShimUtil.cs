@@ -1,4 +1,4 @@
-﻿namespace AtomicAkarin.LotusCore
+﻿namespace AtomicAkarin.LotusCore.Common
 {
     public class ShimUtil
     {

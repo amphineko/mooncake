@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace AtomicAkarin.LotusCore
+namespace AtomicAkarin.LotusCore.Common
 {
     public class ShimIOException : IOException
     {

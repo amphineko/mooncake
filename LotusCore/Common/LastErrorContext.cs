@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace AtomicAkarin.LotusCore
+namespace AtomicAkarin.LotusCore.Common
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct LastErrorContext

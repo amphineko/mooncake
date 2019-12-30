@@ -1,6 +1,6 @@
-using AtomicAkarin.LotusCore.Handles;
+using AtomicAkarin.LotusCore.Common;
 
-namespace AtomicAkarin.LotusCore.Abstractions
+namespace AtomicAkarin.LotusCore.Frames
 {
     public interface IFrameScaler
     {

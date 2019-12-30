@@ -1,4 +1,6 @@
-﻿namespace AtomicAkarin.LotusCore.Handles
+﻿using AtomicAkarin.LotusCore.Common;
+
+namespace AtomicAkarin.LotusCore.Frames
 {
     public class VideoProperties
     {
